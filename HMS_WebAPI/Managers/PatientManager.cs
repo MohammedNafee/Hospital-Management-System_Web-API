@@ -31,6 +31,9 @@ namespace HMS_Phase1.Management_Classes
 
         public Patient? UpdatePatient(int patientId, PatientDTO patientDTO, int loggedInUserId, string role)
         {
+            if (patientDTO == null)
+                throw new ArgumentException("Invalid patient data"); 
+
             var patient = _patientRepository.GetPatientById(patientId);
             if (patient == null) return null;
 
@@ -38,25 +41,13 @@ namespace HMS_Phase1.Management_Classes
             if (role == "Patient" && loggedInUserId != patientId)
                 throw new UnauthorizedAccessException("Patients can only update their own profile.");
 
-            if (patientDTO == null)
-                throw new ArgumentException("Invalid patient data");
+            patient.Name = patientDTO.Name;
+            patient.Age = patientDTO.Age;
+            patient.Gender = patientDTO.Gender;
+            patient.ContactNumber = patientDTO.ContactNumber;
+            patient.Address = patientDTO.Address;
 
-            var updatedPatient = new Patient
-                (
-                    patientDTO.Name,
-                    patientDTO.Age,
-                    patientDTO.Gender,
-                    patientDTO.ContactNumber,
-                    patientDTO.Address
-                );
-
-            patient.Name = updatedPatient.Name;
-            patient.Age = updatedPatient.Age;
-            patient.Gender = updatedPatient.Gender;
-            patient.ContactNumber = updatedPatient.ContactNumber;
-            patient.Address = updatedPatient.Address;
-
-            _patientRepository.UpdatePatient( patient );
+            _patientRepository.UpdatePatient(patient);
             return patient;
         }
 

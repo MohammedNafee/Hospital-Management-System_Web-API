@@ -1,5 +1,4 @@
-﻿using HMS_Phase1.Entities;
-using HMS_Phase1.Management_Classes;
+﻿using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

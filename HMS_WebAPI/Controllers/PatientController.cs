@@ -1,6 +1,6 @@
-﻿using System.Security.Claims;
-using HMS_Phase1.Management_Classes;
+﻿using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
+using HMS_WebAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,20 +10,11 @@ namespace HMS_WebAPI.Controllers
     public class PatientController : ControllerBase
     {
         private readonly PatientManager _patientManager;
-        public PatientController(PatientManager patientManager)
+        private readonly UserInfoService _userInfoService;
+        public PatientController(PatientManager patientManager, UserInfoService userInfoService)
         {
             _patientManager = patientManager;
-        }
-
-        private (int userId, string role) GetUserInfo()
-        {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var loggedInUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            if (!int.TryParse(loggedInUserId, out int userId))
-                throw new  UnauthorizedAccessException();
-
-            return (userId, loggedInUserRole);
+            _userInfoService = userInfoService; 
         }
 
         [HttpPost]
@@ -49,7 +40,7 @@ namespace HMS_WebAPI.Controllers
 
             try
             {
-                var (userId, role) = GetUserInfo();
+                var (userId, role) = _userInfoService.GetUserInfo();
 
                 var patient = _patientManager.UpdatePatient(id, patientDTO, userId, role);
 
@@ -60,8 +51,12 @@ namespace HMS_WebAPI.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
-            }  
+                return Forbid(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);  
+            }
           
         }
 
@@ -87,7 +82,7 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetAllPatients()
         {
-            var (userId, role) = GetUserInfo();
+            var (userId, role) = _userInfoService.GetUserInfo();
             
             var patients = _patientManager.GetAllPatients(userId, role);
             if (!patients.Any())
@@ -103,7 +98,7 @@ namespace HMS_WebAPI.Controllers
             try
             {
 
-                var (userId, role) = GetUserInfo();
+                var (userId, role) = _userInfoService.GetUserInfo();
 
                 var patient = _patientManager.GetPatientById(id, userId, role);
 
@@ -114,7 +109,7 @@ namespace HMS_WebAPI.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid();            
+                return Forbid(ex.Message);            
             }
         }
     }

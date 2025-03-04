@@ -30,7 +30,7 @@ namespace HMS_WebAPI.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return Forbid(ex.Message);
             }
             catch (ArgumentException ex)
             {
@@ -60,9 +60,9 @@ namespace HMS_WebAPI.Controllers
                 _appointmentManager.CancelAppointment(id, userId, role);
                 return Ok($"Appointment {id} canceled successfully.");
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return Forbid(ex.Message);
             }
             catch (KeyNotFoundException ex)
             {
@@ -84,9 +84,9 @@ namespace HMS_WebAPI.Controllers
 
                 return Ok(updatedAppointment);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                return Forbid();
+                return Forbid(ex.Message);
             }
         }
     }
