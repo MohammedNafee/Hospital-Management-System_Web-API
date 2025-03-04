@@ -1,9 +1,9 @@
-
 using System.Text;
 using HMS_Phase1;
 using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DbAccess;
 using HMS_WebAPI.Managers;
+using HMS_WebAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -55,10 +55,15 @@ public class Program
             });
         });
 
+        builder.Services.AddScoped<AccountManager>();
+
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<UserInfoService>();
+
         builder.Services.AddScoped<PatientRepository>();
         builder.Services.AddScoped<PatientManager>();
 
-        builder.Services.AddScoped<AccountManager>();
+        builder.Services.AddScoped<BillingRepository>();
         builder.Services.AddScoped<BillingManager>();
 
         builder.Services.AddScoped<AppointmentRepository>();

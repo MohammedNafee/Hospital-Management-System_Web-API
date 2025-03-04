@@ -1,7 +1,6 @@
-﻿using System.Security.Claims;
-using HMS_Phase1;
-using HMS_Phase1.Entities;
+﻿using HMS_Phase1;
 using HMS_Phase1.Management_Classes;
+using HMS_WebAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,9 +11,12 @@ namespace HMS_WebAPI.Controllers
     {
         private readonly BillingManager _billingManager;
 
-        public BillingController(BillingManager billingManager)
+        private readonly UserInfoService _userInfoService;
+
+        public BillingController(BillingManager billingManager, UserInfoService userInfoService)
         {
             _billingManager = billingManager;
+            _userInfoService = userInfoService;
         }
 
         [HttpPost]
@@ -39,12 +41,9 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetBillsByPatientId([FromQuery] int? patientId)
         {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var (userId, role) = _userInfoService.GetUserInfo();
 
-            if (!int.TryParse(loggedInUserId, out int userId))
-                return Forbid();
-
-            if (User.IsInRole("Patient"))
+            if (role == "Patient")
             {
                 patientId = userId;
             }
@@ -63,12 +62,9 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetAllBills()
         {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var (userId, role) = _userInfoService.GetUserInfo();
 
-            if (!int.TryParse(loggedInUserId,out int userId))
-                return Forbid();
-            
-            if (User.IsInRole("Patient"))
+            if (role == "Patient")
             {
                 var bills = _billingManager.GetBillsByPatientId(userId);
                 if (!bills.Any())

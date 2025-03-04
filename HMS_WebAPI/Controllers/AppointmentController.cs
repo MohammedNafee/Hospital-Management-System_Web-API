@@ -1,7 +1,6 @@
-﻿using System.Security.Claims;
-using HMS_Phase1.Entities;
-using HMS_Phase1.Management_Classes;
+﻿using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
+using HMS_WebAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,21 +10,12 @@ namespace HMS_WebAPI.Controllers
     public class AppointmentController : ControllerBase
     {
         private readonly AppointmentManager _appointmentManager;
+        private readonly UserInfoService _userInfoService;
 
-        public AppointmentController(AppointmentManager appointmentManager)
+        public AppointmentController(AppointmentManager appointmentManager, UserInfoService userInfoService)
         {
             _appointmentManager = appointmentManager;
-        }
-
-        private (int userId, string role) GetUserInfo()
-        {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var loggedInUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            if (!int.TryParse(loggedInUserId, out int userId))
-                throw new UnauthorizedAccessException();
-
-            return (userId, loggedInUserRole);
+            _userInfoService = userInfoService;
         }
 
         [HttpPost]
@@ -34,7 +24,7 @@ namespace HMS_WebAPI.Controllers
         {
             try
             {
-                var (userId, role) = GetUserInfo();
+                var (userId, role) = _userInfoService.GetUserInfo();
                 _appointmentManager.ScheduleAppointment(appointmentDTO, userId, role);
                 return Created();
             }
@@ -66,7 +56,7 @@ namespace HMS_WebAPI.Controllers
         {
             try
             {
-                var (userId, role) = GetUserInfo();
+                var (userId, role) = _userInfoService.GetUserInfo();
                 _appointmentManager.CancelAppointment(id, userId, role);
                 return Ok($"Appointment {id} canceled successfully.");
             }
@@ -86,7 +76,7 @@ namespace HMS_WebAPI.Controllers
         {
             try
             {
-                var (userId, role) = GetUserInfo();
+                var (userId, role) = _userInfoService.GetUserInfo();
                 var updatedAppointment = _appointmentManager.UpdateAppointment(id, appointmentDTO, userId, role);
                 
                 if (updatedAppointment == null)
