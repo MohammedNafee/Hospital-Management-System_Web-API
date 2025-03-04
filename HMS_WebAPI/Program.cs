@@ -75,6 +75,7 @@ public class Program
         builder.Services.AddScoped<MedicationRepository>();
         builder.Services.AddScoped<MedicationManager>();
 
+        builder.Services.AddScoped<PrescriptionRepository>();
         builder.Services.AddScoped<PrescriptionManager>();
 
         string connString = builder.Configuration.GetConnectionString("DefaultConnection");

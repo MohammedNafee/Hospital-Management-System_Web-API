@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
+using HMS_WebAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +11,12 @@ namespace HMS_WebAPI.Controllers
     public class PrescriptionController : ControllerBase
     {
         private readonly PrescriptionManager _prescriptionManager;
+        private readonly UserInfoService _userInfoService;
 
-        public PrescriptionController(PrescriptionManager prescriptionManager)
+        public PrescriptionController(PrescriptionManager prescriptionManager, UserInfoService userInfoService)
         {
             _prescriptionManager = prescriptionManager;
+            _userInfoService = userInfoService; 
         }
 
         [HttpPost]
@@ -47,13 +50,10 @@ namespace HMS_WebAPI.Controllers
             if (prescription == null)
                 return NotFound("Prescription not found");
 
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var (userId, role) = _userInfoService.GetUserInfo();
 
-            if (!int.TryParse(loggedInUserId, out int userId))
-                return Forbid();
-
-            if (User.IsInRole("Patient") && prescription.PatientId != userId)
-                return Forbid("Patient can only view their own prescriptions");
+            if (role == "Patient" && prescription.PatientId != userId)
+                return Forbid("Patients can only view their own prescriptions");
 
             return Ok(prescription);
         }
@@ -62,12 +62,9 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetAllPrescriptions()
         {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var (userId, role) = _userInfoService.GetUserInfo();
 
-            if (!int.TryParse(loggedInUserId, out int userId))
-                return Forbid();
-
-            if (User.IsInRole("Patient"))
+            if (role == "Patient")
             {
                 var prescriptions = _prescriptionManager.GetAllPrescriptions()
                     .Where(pre => pre.PatientId == userId).ToList();

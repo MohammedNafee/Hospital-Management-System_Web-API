@@ -1,16 +1,17 @@
 ﻿using HMS_Phase1.Entities;
+using HMS_WebAPI.DbAccess;
 using HMS_WebAPI.DTOs;
 
 namespace HMS_Phase1.Management_Classes
 {
     public class PrescriptionManager
     {
-        private readonly HMSContext _context;
+        private readonly PrescriptionRepository _prescriptionRepository;
         private readonly BillingManager _billingManager;
 
-        public PrescriptionManager(HMSContext context, BillingManager billingManager)
+        public PrescriptionManager(PrescriptionRepository prescriptionRepository, BillingManager billingManager)
         {
-            _context = context;
+            _prescriptionRepository = prescriptionRepository;   
             _billingManager = billingManager;
         }
 
@@ -19,7 +20,7 @@ namespace HMS_Phase1.Management_Classes
             if (prescriptionDTO == null)
                 throw new ArgumentNullException(nameof(prescriptionDTO), "Invalid prescription data");
 
-            var medication = _context.Medications.SingleOrDefault(m => m.MedicationId == prescriptionDTO.MedicationId);
+            var medication = _prescriptionRepository.GetMedicationById(prescriptionDTO.MedicationId);
             
             if (medication == null)
                 throw new InvalidOperationException("Medication not found");
@@ -29,6 +30,7 @@ namespace HMS_Phase1.Management_Classes
 
             // Reduce stock quantity
             medication.Quantity -= 1;
+            _prescriptionRepository.UpdateMedication(medication);
 
             var prescription = new Prescription(
                 prescriptionDTO.PrescriptionDate,
@@ -36,16 +38,14 @@ namespace HMS_Phase1.Management_Classes
                 prescriptionDTO.DoctorId
             );
 
-            _context.Prescriptions.Add(prescription);
-            _context.SaveChanges();
+            _prescriptionRepository.AddPrescription(prescription);
 
             var prescriptionMedication = new PrescriptionMedication(
                 prescription.PrescriptionId, 
                 prescriptionDTO.MedicationId
             );
             
-            _context.PrescriptionMedications.Add(prescriptionMedication);
-            _context.SaveChanges();
+            _prescriptionRepository.AddPrescriptionMedication(prescriptionMedication);
 
             // Generate bill after issuing a prescription
             var eventArgs = new PrescriptionEventArgs(
@@ -61,24 +61,27 @@ namespace HMS_Phase1.Management_Classes
 
         public Prescription? GetPrescriptionById(int id)
         {
-            return _context.Prescriptions.SingleOrDefault(pre => pre.PrescriptionId == id);
+            return _prescriptionRepository.GetPrescriptionById(id);
         }
 
         public List<Prescription> GetAllPrescriptions()
         {
-            return _context.Prescriptions.ToList();
+            return _prescriptionRepository.GetAllPrescriptions();
         }
 
         public Prescription? UpdatePrescription(int id, PrescriptionDTO updatedPrescription)
         {
-            var prescription = _context.Prescriptions.SingleOrDefault(pre => pre.PrescriptionId == id);
+            if (updatedPrescription == null)
+                throw new ArgumentException("Invalid Prescription data");
+
+            var prescription = _prescriptionRepository.GetPrescriptionById(id);
             if (prescription == null) return null;
 
             prescription.PrescriptionDate = updatedPrescription.PrescriptionDate;
             prescription.PatientId = updatedPrescription.PatientId; 
             prescription.DoctorId = updatedPrescription.DoctorId;
             
-            _context.SaveChanges(); 
+            _prescriptionRepository.UpdatePrescription(prescription);
             return prescription;
         }
     }
