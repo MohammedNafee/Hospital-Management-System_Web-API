@@ -2,6 +2,7 @@
 using System.Text;
 using HMS_Phase1;
 using HMS_Phase1.Management_Classes;
+using HMS_WebAPI.DbAccess;
 using HMS_WebAPI.Managers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -54,7 +55,9 @@ public class Program
             });
         });
 
+        builder.Services.AddScoped<PatientRepository>();
         builder.Services.AddScoped<PatientManager>();
+
         builder.Services.AddScoped<AccountManager>();
         builder.Services.AddScoped<BillingManager>();
         builder.Services.AddScoped<AppointmentManager>();

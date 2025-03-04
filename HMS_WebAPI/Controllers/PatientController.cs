@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using HMS_Phase1.Entities;
 using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
 using Microsoft.AspNetCore.Authorization;
@@ -16,56 +15,54 @@ namespace HMS_WebAPI.Controllers
             _patientManager = patientManager;
         }
 
+        private (int userId, string role) GetUserInfo()
+        {
+            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var loggedInUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            if (!int.TryParse(loggedInUserId, out int userId))
+                throw new  UnauthorizedAccessException();
+
+            return (userId, loggedInUserRole);
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin,Doctor")]
         public IActionResult AddPatient([FromBody] PatientDTO patientDto)
         {
-            if (patientDto == null)
-                return BadRequest("Invalid patient data");
+            try
+            {
+                _patientManager.AddPatient(patientDto);
+                return Created();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
-            var patient = new Patient
-                (
-                    patientDto.Name,
-                    patientDto.Age,
-                    patientDto.Gender,
-                    patientDto.ContactNumber,
-                    patientDto.Address
-                );
-
-            _patientManager.AddPatient(patient);
-            return Created();
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult UpdatePatient(int id, [FromBody] PatientDTO patientDTO)
         {
-            if (patientDTO == null)
-                return BadRequest("Invalid patient data");
 
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            try
+            {
+                var (userId, role) = GetUserInfo();
 
-            if (!int.TryParse(loggedInUserId, out int userId))
+                var patient = _patientManager.UpdatePatient(id, patientDTO, userId, role);
+
+                if (patient == null)
+                    return NotFound("Patient not found");
+
+                return Ok(patient);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
                 return Forbid();
-
-            // Patients can only update their own profile
-            if (User.IsInRole("Patient") && userId != id)
-                return Forbid("Patients can only update their own profile.");
-
-            var updatedPatient = new Patient
-            (
-                patientDTO.Name,
-                patientDTO.Age,
-                patientDTO.Gender,
-                patientDTO.ContactNumber,
-                patientDTO.Address
-            );
-
-            var patient = _patientManager.UpdatePatient(id, updatedPatient);
-            if (patient == null)
-                return NotFound("Patient not found");
-
-            return Ok(patient);
+            }  
+          
         }
 
         [HttpDelete("{id}")]
@@ -90,22 +87,9 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetAllPatients()
         {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (!int.TryParse(loggedInUserId, out int userId))
-                return Forbid();
-
-            // Patients can only see their own data
-            if (User.IsInRole("Patient"))
-            {
-                var patient = _patientManager.GetPatientById(userId);
-                if (patient == null)
-                    return NotFound("Patient not found");
-
-                return Ok(new List<Patient> { patient });
-            }
-
-            var patients = _patientManager.GetAllPatients();
+            var (userId, role) = GetUserInfo();
+            
+            var patients = _patientManager.GetAllPatients(userId, role);
             if (!patients.Any())
                 return NotFound("No patients available");
 
@@ -116,19 +100,22 @@ namespace HMS_WebAPI.Controllers
         [Authorize(Roles = "Admin,Doctor,Patient")]
         public IActionResult GetPatientById(int id)
         {
-            var loggedInUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            try
+            {
 
-            if (!int.TryParse(loggedInUserId, out int userId))
-                return Forbid();
+                var (userId, role) = GetUserInfo();
 
-            if (User.IsInRole("Patient") && userId != id)
-                return Forbid("Patients can only view their own profile.");
+                var patient = _patientManager.GetPatientById(id, userId, role);
 
-            var patient = _patientManager.GetPatientById(id);
-            if (patient == null)
-                return NotFound("Patient not found");
+                if (patient == null)
+                    return NotFound("Patient not found");
 
-            return Ok(patient);
+                return Ok(patient);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid();            
+            }
         }
     }
 }

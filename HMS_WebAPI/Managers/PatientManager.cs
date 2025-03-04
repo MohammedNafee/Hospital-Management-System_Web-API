@@ -1,26 +1,54 @@
 ﻿using HMS_Phase1.Entities;
+using HMS_WebAPI.DbAccess;
+using HMS_WebAPI.DTOs;
 
 namespace HMS_Phase1.Management_Classes
 {
     public class PatientManager
     {
-        private readonly HMSContext _context;
-
-        public PatientManager(HMSContext context)
+        private readonly PatientRepository _patientRepository;
+        public PatientManager(PatientRepository patientRepository)
         {
-            _context = context;
+            _patientRepository = patientRepository;
         }
 
-        public void AddPatient(Patient patient)
+        public void AddPatient(PatientDTO patientDto)
         {
-            _context.Patients.Add(patient);
-            _context.SaveChanges();  
+            if (patientDto == null) 
+                throw new ArgumentException("Invalid patient data");
+
+            var patient = new Patient
+                (
+                    patientDto.Name,
+                    patientDto.Age,
+                    patientDto.Gender,
+                    patientDto.ContactNumber,
+                    patientDto.Address
+                );
+
+            _patientRepository.AddPatient( patient );
         }
 
-        public Patient? UpdatePatient(int patientId, Patient updatedPatient)
+        public Patient? UpdatePatient(int patientId, PatientDTO patientDTO, int loggedInUserId, string role)
         {
-            var patient = _context.Patients.SingleOrDefault(p => p.PatientId == patientId);
+            var patient = _patientRepository.GetPatientById(patientId);
             if (patient == null) return null;
+
+            // Patients can only update their own profile
+            if (role == "Patient" && loggedInUserId != patientId)
+                throw new UnauthorizedAccessException("Patients can only update their own profile.");
+
+            if (patientDTO == null)
+                throw new ArgumentException("Invalid patient data");
+
+            var updatedPatient = new Patient
+                (
+                    patientDTO.Name,
+                    patientDTO.Age,
+                    patientDTO.Gender,
+                    patientDTO.ContactNumber,
+                    patientDTO.Address
+                );
 
             patient.Name = updatedPatient.Name;
             patient.Age = updatedPatient.Age;
@@ -28,39 +56,42 @@ namespace HMS_Phase1.Management_Classes
             patient.ContactNumber = updatedPatient.ContactNumber;
             patient.Address = updatedPatient.Address;
 
-            _context.SaveChanges();
+            _patientRepository.UpdatePatient( patient );
             return patient;
         }
 
         public bool DeletePatient(int patientId)
         {
-            var patient = _context.Patients.SingleOrDefault(p => p.PatientId == patientId);
+            var patient = _patientRepository.GetPatientById(patientId);
             if (patient == null) return false;
 
             // Check for dependencies
-            bool hasAppointments = _context.Appointments.Any(a => a.PatientId == patientId);
-            bool hasPrescriptions = _context.Prescriptions.Any(p => p.PatientId == patientId);
-            bool hasBills = _context.Bills.Any(b => b.Prescription.PatientId == patientId);
-
-            if (hasAppointments || hasPrescriptions || hasBills)
+            if (_patientRepository.HasDependencies(patientId))
             {
                 throw new InvalidOperationException("Patient has dependent records (Appointments, Prescriptions, Bills) and cannot be deleted.");
             }
 
-            _context.Patients.Remove(patient);
-            _context.SaveChanges();
-            return true;
+            return _patientRepository.DeletePatient( patient );
         }
 
 
-        public List<Patient> GetAllPatients()
+        public List<Patient> GetAllPatients(int loggedInUserId, string role)
         {
-            return _context.Patients.ToList();
+            if (role == "Patient")
+            {
+                var patient = _patientRepository.GetPatientById(loggedInUserId);    
+                return patient != null ? new List<Patient> { patient } : new List<Patient>();
+            }
+            return _patientRepository.GetAllPatients();
         }
 
-        public Patient? GetPatientById(int id)
+        public Patient? GetPatientById(int id, int loggedInUserId, string role)
         {
-            return _context.Patients.SingleOrDefault(p => p.PatientId == id);
+            if (role == "Patient" && id != loggedInUserId)
+            {
+                throw new UnauthorizedAccessException("Patients can only view their own profile.");
+            }
+            return _patientRepository.GetPatientById(id);
         }
 
 
