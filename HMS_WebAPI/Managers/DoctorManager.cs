@@ -1,36 +1,63 @@
 ﻿using HMS_Phase1.Entities;
+using HMS_WebAPI.DbAccess;
+using HMS_WebAPI.DTOs;
 
 namespace HMS_Phase1.Management_Classes
 {
     public class DoctorManager
     {
-        private readonly HMSContext _context;
+        private readonly DoctorRepository _doctorRepository;
 
-        public DoctorManager(HMSContext context)
+        public DoctorManager(DoctorRepository doctorRepository)
         {
-            _context = context;
+            _doctorRepository = doctorRepository;
         }
 
-        public void AddDoctor(Doctor doctor)
+        public void AddDoctor(DoctorDTO doctorDTO)
         {
-            _context.Doctors.Add(doctor);
-            _context.SaveChanges();
+            if (doctorDTO == null)
+                throw new ArgumentException("Invalid doctor data");
+
+            var doctor = new Doctor(
+                doctorDTO.Name,
+                doctorDTO.Age,
+                doctorDTO.Gender,
+                doctorDTO.ContactNumber,
+                doctorDTO.Email,
+                doctorDTO.Specialty
+            );
+
+            _doctorRepository.AddDoctor(doctor);
         }
+
 
         public List<Doctor> GetAllDoctors()
         {
-            return _context.Doctors.ToList();
+            return _doctorRepository.GetAllDoctors();
         }
 
         public Doctor? GetDoctorById(int doctorId)
         {
-            return _context.Doctors.SingleOrDefault(d => d.DoctorId == doctorId);
+            return _doctorRepository.GetDoctorById(doctorId);
         }
 
-        public Doctor? UpdateDoctor(int doctorId, Doctor updatedDoctor)
+        public Doctor? UpdateDoctor(int doctorId, DoctorDTO doctorDTO)
         {
-            var doctor = _context.Doctors.SingleOrDefault(d => d.DoctorId == doctorId);
+            if (doctorDTO == null)
+                throw new ArgumentException("Invalid doctor data");
+
+            var doctor = _doctorRepository.GetDoctorById(doctorId);
             if (doctor == null) return null;
+
+            var updatedDoctor = new Doctor
+                (
+                    doctorDTO.Name,
+                    doctorDTO.Age,
+                    doctorDTO.Gender,
+                    doctorDTO.ContactNumber,
+                    doctorDTO.Email,
+                    doctorDTO.Specialty
+                );
 
             doctor.Name = updatedDoctor.Name;
             doctor.Age = updatedDoctor.Age;
@@ -39,27 +66,21 @@ namespace HMS_Phase1.Management_Classes
             doctor.Email = updatedDoctor.Email;
             doctor.Specialty = updatedDoctor.Specialty;
 
-            _context.SaveChanges();
-            return doctor;
+            _doctorRepository.UpdateDoctor(doctor);
+           return doctor;
         }
 
         public bool DeleteDoctor(int doctorId)
         {
-            var doctor = _context.Doctors.SingleOrDefault(d => d.DoctorId == doctorId);
+            var doctor = _doctorRepository.GetDoctorById(doctorId);
             if (doctor == null) return false;
 
-            // Check for dependencies
-            bool hasAppointments = _context.Appointments.Any(a => a.DoctorId == doctorId);
-            bool hasPrescriptions = _context.Prescriptions.Any(p => p.DoctorId == doctorId);
-
-            if (hasAppointments || hasPrescriptions)
+            if (_doctorRepository.HasDependencies(doctorId))
             {
                 throw new InvalidOperationException("Doctor has dependent records (Appointments/Prescriptions) and cannot be deleted.");
             }
 
-            _context.Doctors.Remove(doctor);
-            _context.SaveChanges();
-            return true;
+            return _doctorRepository.DeleteDoctor(doctor);
         }
     }
 }

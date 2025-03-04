@@ -69,7 +69,9 @@ public class Program
         builder.Services.AddScoped<AppointmentRepository>();
         builder.Services.AddScoped<AppointmentManager>();
 
+        builder.Services.AddScoped<DoctorRepository>();
         builder.Services.AddScoped<DoctorManager>();
+
         builder.Services.AddScoped<MedicationManager>();
         builder.Services.AddScoped<PrescriptionManager>();
 

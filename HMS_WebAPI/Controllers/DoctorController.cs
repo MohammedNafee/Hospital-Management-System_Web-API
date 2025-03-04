@@ -1,5 +1,4 @@
-﻿using HMS_Phase1.Entities;
-using HMS_Phase1.Management_Classes;
+﻿using HMS_Phase1.Management_Classes;
 using HMS_WebAPI.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,21 +19,15 @@ namespace HMS_WebAPI.Controllers
         [HttpPost]
         public IActionResult AddDoctor([FromBody] DoctorDTO doctorDTO)
         {
-            if (doctorDTO == null)
-                return BadRequest("Invalid doctor data");
-
-            var doctor = new Doctor
-            (
-                doctorDTO.Name,
-                doctorDTO.Age,
-                doctorDTO.Gender,
-                doctorDTO.ContactNumber,
-                doctorDTO.Email,
-                doctorDTO.Specialty
-            );
-
-            _doctorManager.AddDoctor(doctor);
-            return Created();
+            try
+            {
+                _doctorManager.AddDoctor(doctorDTO);
+                return Created();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet]
@@ -60,20 +53,7 @@ namespace HMS_WebAPI.Controllers
         [HttpPut("{id}")]
         public IActionResult UpdateDoctor(int id, [FromBody] DoctorDTO doctorDTO)
         {
-            if (doctorDTO == null)
-                return BadRequest("Invalid doctor data");
-
-            var updatedDoctor = new Doctor
-            (
-                doctorDTO.Name,
-                doctorDTO.Age,
-                doctorDTO.Gender,
-                doctorDTO.ContactNumber,
-                doctorDTO.Email,
-                doctorDTO.Specialty
-            );
-
-            var doctor = _doctorManager.UpdateDoctor(id, updatedDoctor);
+            var doctor = _doctorManager.UpdateDoctor(id, doctorDTO);
             if (doctor == null)
                 return NotFound("Doctor not found");
 
