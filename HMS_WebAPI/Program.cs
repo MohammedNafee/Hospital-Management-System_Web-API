@@ -60,7 +60,10 @@ public class Program
 
         builder.Services.AddScoped<AccountManager>();
         builder.Services.AddScoped<BillingManager>();
+
+        builder.Services.AddScoped<AppointmentRepository>();
         builder.Services.AddScoped<AppointmentManager>();
+
         builder.Services.AddScoped<DoctorManager>();
         builder.Services.AddScoped<MedicationManager>();
         builder.Services.AddScoped<PrescriptionManager>();

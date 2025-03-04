@@ -1,59 +1,83 @@
 ﻿using HMS_Phase1.Entities;
+using HMS_WebAPI.DbAccess;
 using HMS_WebAPI.DTOs;
 
 namespace HMS_Phase1.Management_Classes
 {
     public class AppointmentManager
     {
-        private readonly HMSContext _context;
+        private readonly AppointmentRepository _appointmentRepository;
 
-        public AppointmentManager(HMSContext context)
+        public AppointmentManager(AppointmentRepository appointmentRepository)
         {
-            _context = context;
+            _appointmentRepository = appointmentRepository;
         }
 
-        public void ScheduleAppointment(Appointment appointment)
+        public void ScheduleAppointment(AppointmentDTO appointmentDto, int loggedInUserId, string role)
         {
-            _context.Appointments.Add(appointment);
-            _context.SaveChanges();
+            if (appointmentDto == null)
+                throw new ArgumentException("Invalid appointment data");
+
+            if (role == "Patient" && loggedInUserId != appointmentDto.PatientId)
+                throw new UnauthorizedAccessException("Patients can only schedule their own appointments.");
+
+            if (role == "Doctor" && loggedInUserId != appointmentDto.DoctorId)
+                throw new UnauthorizedAccessException("Doctors can only schedule their own appointments.");
+
+            var appointment = new Appointment(
+                appointmentDto.AppointmentDate,
+                appointmentDto.PatientId,
+                appointmentDto.DoctorId
+            );
+
+            _appointmentRepository.AddAppointment(appointment);
         }
 
         public Appointment? GetAppointmentById(int appointmentId)
         {
-            return _context.Appointments.SingleOrDefault(a => a.AppointmentId == appointmentId);    
+            return _appointmentRepository.GetAppointmentById(appointmentId);    
         }
 
         public List<Appointment> GetAppointmentsByPatientId(int patientId)
         {
-            return _context.Appointments.Where(a => a.PatientId == patientId).ToList();
+            return _appointmentRepository.GetAppointmentsByPatientId(patientId);
         }
 
         public List<Appointment> GetAppointmentsByDoctorId(int doctorId)
         {
-            return _context.Appointments.Where(a => a.DoctorId == doctorId).ToList();
+            return _appointmentRepository.GetAppointmentsByDoctorId(doctorId);
         }
 
-        public bool CancelAppointment(int appointmentId)
+        public void CancelAppointment(int appointmentId, int loggedInUserId, string role)
         {
-            var appointment = _context.Appointments.SingleOrDefault(a => a.AppointmentId == appointmentId);
-            if (appointment == null) return false;
+            var appointment = _appointmentRepository.GetAppointmentById(appointmentId);
+            if (appointment == null)
+                throw new KeyNotFoundException("Appointment not found.");
+
+            if (role == "Patient" && loggedInUserId != appointment.PatientId)
+                throw new UnauthorizedAccessException("Patients can only cancel their own appointments.");
+
+            if (role == "Doctor" && loggedInUserId != appointment.DoctorId)
+                throw new UnauthorizedAccessException("Doctors can only cancel their own appointments.");
 
             appointment.Status = AppointmentStatus.Canceled;
-            _context.SaveChanges();
-            return true;
+            _appointmentRepository.UpdateAppointment(appointment);
         }
 
-        public Appointment? UpdateAppointment(int appointmentId, AppointmentDTO appointmentDTO)
+        public Appointment? UpdateAppointment(int appointmentId, AppointmentDTO appointmentDto, int loggedInUserId, string role)
         {
-            var appointment = _context.Appointments.SingleOrDefault(a => a.AppointmentId == appointmentId);
+            var appointment = _appointmentRepository.GetAppointmentById(appointmentId);
             if (appointment == null)
                 return null;
 
-            appointment.PatientId = appointmentDTO.PatientId;
-            appointment.DoctorId = appointmentDTO.DoctorId;
-            appointment.AppointmentDate = appointmentDTO.AppointmentDate;
+            if (role == "Doctor" && loggedInUserId != appointment.DoctorId)
+                throw new UnauthorizedAccessException("Doctors can only update their own appointments.");
 
-            _context.SaveChanges();
+            appointment.PatientId = appointmentDto.PatientId;
+            appointment.DoctorId = appointmentDto.DoctorId;
+            appointment.AppointmentDate = appointmentDto.AppointmentDate;
+
+            _appointmentRepository.UpdateAppointment(appointment);
             return appointment;
         }
     }
