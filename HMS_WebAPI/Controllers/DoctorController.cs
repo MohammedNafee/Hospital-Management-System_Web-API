@@ -53,11 +53,19 @@ namespace HMS_WebAPI.Controllers
         [HttpPut("{id}")]
         public IActionResult UpdateDoctor(int id, [FromBody] DoctorDTO doctorDTO)
         {
-            var doctor = _doctorManager.UpdateDoctor(id, doctorDTO);
-            if (doctor == null)
-                return NotFound("Doctor not found");
+            try
+            {
+                var doctor = _doctorManager.UpdateDoctor(id, doctorDTO);
+                if (doctor == null)
+                    return NotFound("Doctor not found");
 
-            return Ok(doctor);
+                return Ok(doctor);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            } 
+
         }
 
         [HttpDelete("{id}")]

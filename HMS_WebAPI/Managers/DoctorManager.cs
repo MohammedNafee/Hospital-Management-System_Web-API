@@ -49,22 +49,12 @@ namespace HMS_Phase1.Management_Classes
             var doctor = _doctorRepository.GetDoctorById(doctorId);
             if (doctor == null) return null;
 
-            var updatedDoctor = new Doctor
-                (
-                    doctorDTO.Name,
-                    doctorDTO.Age,
-                    doctorDTO.Gender,
-                    doctorDTO.ContactNumber,
-                    doctorDTO.Email,
-                    doctorDTO.Specialty
-                );
-
-            doctor.Name = updatedDoctor.Name;
-            doctor.Age = updatedDoctor.Age;
-            doctor.Gender = updatedDoctor.Gender;
-            doctor.ContactNumber = updatedDoctor.ContactNumber;
-            doctor.Email = updatedDoctor.Email;
-            doctor.Specialty = updatedDoctor.Specialty;
+            doctor.Name = doctorDTO.Name;
+            doctor.Age = doctorDTO.Age;
+            doctor.Gender = doctorDTO.Gender;
+            doctor.ContactNumber = doctorDTO.ContactNumber;
+            doctor.Email = doctorDTO.Email;
+            doctor.Specialty = doctorDTO.Specialty;
 
             _doctorRepository.UpdateDoctor(doctor);
            return doctor;
