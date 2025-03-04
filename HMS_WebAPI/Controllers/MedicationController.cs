@@ -20,18 +20,15 @@ namespace HMS_WebAPI.Controllers
         [HttpPost]
         public IActionResult AddMedication([FromBody] MedicationDTO medicationDTO)
         {
-            if (medicationDTO == null)
-                return BadRequest("Invalid medication data");
-
-            var medication = new Medication
-            (
-                medicationDTO.Name,
-                medicationDTO.Quantity,
-                medicationDTO.Price
-            );
-
-            _medicationManager.AddMedication(medication);
-            return Created();
+            try
+            {
+                _medicationManager.AddMedication(medicationDTO);
+                return Created();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpGet]
@@ -48,14 +45,18 @@ namespace HMS_WebAPI.Controllers
         [HttpPut("{id}")]
         public IActionResult UpdateMedication(int id, [FromBody] MedicationDTO medicationDTO)
         {
-            if (medicationDTO == null)
-                return BadRequest("Invalid medication data");
+            try
+            {
+                var updatedMedication = _medicationManager.UpdateMedication(id, medicationDTO);
+                if (updatedMedication == null)
+                    return NotFound("Medication not found");
 
-            var updatedMedication = _medicationManager.UpdateMedication(id, medicationDTO);
-            if (updatedMedication == null)
-                return NotFound("Medication not found");
-
-            return Ok(updatedMedication);
+                return Ok(updatedMedication);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]
