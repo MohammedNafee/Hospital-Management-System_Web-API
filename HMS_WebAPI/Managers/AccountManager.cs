@@ -35,6 +35,7 @@ namespace HMS_WebAPI.Managers
             dbcontext.SaveChanges();
         }
 
+        //Generate JWT Token 
         public string? Authenticate(LoginDTO loginUser)
         {
             var systemUser = dbcontext.Users
